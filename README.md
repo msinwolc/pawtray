@@ -50,7 +50,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - Weather data provided by OpenWeatherMap API
-- Icons and animations created by [Artist Name]
+- Icons and animations created by [ToffeeCraft]
 - Special thanks to all contributors and testers
 
 ---
