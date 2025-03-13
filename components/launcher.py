@@ -51,16 +51,11 @@ class QuickLauncher:
             command = action.data()
             try:
                 subprocess.Popen(command, shell=True)
-                
-                # 更改宠物表情
-                if hasattr(self.pet, 'set_pet_animation'):
-                    self.pet.set_pet_animation("walk")  # 使用行走动画表示启动应用
-                else:
-                    self.pet.pet_label.setText("🚀")
                     
                 QTimer.singleShot(1000, self.pet.update_pet_appearance)
             except Exception as e:
-                print(f"启动应用失败: {e}")
+                # print(f"启动应用失败: {e}")
+                pass
     
     def add_custom_app(self):
         """添加自定义应用"""

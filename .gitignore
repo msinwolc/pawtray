@@ -34,3 +34,5 @@ pip-delete-this-directory.txt
 # Temporary files
 temp/
 tmp/
+
+weather_cache.json

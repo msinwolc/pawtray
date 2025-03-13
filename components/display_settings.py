@@ -173,24 +173,3 @@ class DisplaySettings:
         
         # 更新显示
         self.pet.update_bubble_content()
-    
-    # def load_settings(self):
-    #     """从配置文件加载设置"""
-    #     try:
-    #         settings = QSettings("PawTray", "DisplaySettings")
-            
-    #         for key in self.display_options:
-    #             if settings.contains(f"display/{key}"):
-    #                 self.display_options[key] = settings.value(f"display/{key}", type=bool)
-    #     except Exception as e:
-    #         print(f"加载显示设置失败: {e}")
-    
-    # def save_settings(self):
-    #     """保存设置到配置文件"""
-    #     try:
-    #         settings = QSettings("PawTray", "DisplaySettings")
-            
-    #         for key, value in self.display_options.items():
-    #             settings.setValue(f"display/{key}", value)
-    #     except Exception as e:
-    #         print(f"保存显示设置失败: {e}")

@@ -37,19 +37,10 @@ class ScreenshotManager:
         # 保存截图
         screenshot.save(filename, "PNG")
         
-        # 显示宠物和气泡
+        # 显示气泡
         self.pet.show()
         if hasattr(self.pet, 'info_bubble') and bubble_was_visible:
             self.pet.info_bubble.show()
         
-        # 显示成功消息
-        if hasattr(self.pet, 'set_pet_animation'):
-            self.pet.set_pet_animation("jump")  # 使用跳跃动画表示成功
-        else:
-            self.pet.pet_label.setText("📸")
-        
-        # 5秒后恢复正常表情
-        QTimer.singleShot(5000, self.pet.update_pet_appearance)
-        
-        # 可选：打开截图
+        # 打开截图
         os.startfile(os.path.abspath(filename))

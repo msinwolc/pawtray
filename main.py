@@ -157,15 +157,21 @@ class TrayPet(QWidget):
             pass
     
     def update_system_and_bubble(self):
-        """更新系统信息和气泡内容"""
+        """更新系统信息和气泡内容 - 确保同步更新"""
+        # 不需要再调用异步更新，因为SystemMonitor已经在后台持续更新
+        # 只需要使用最新的数据更新UI
+        
         # 更新托盘图标提示文本
-        if hasattr(self, 'tray_icon'):
-            self.tray_icon.setToolTip(f"CPU: {self.system_monitor.cpu_percent:.1f}% | 内存: {self.system_monitor.memory_percent:.1f}%")
+        if hasattr(self, 'tray_icon') and hasattr(self, 'system_monitor'):
+            # 使用系统监控的最新数据
+            cpu = self.system_monitor.cpu_percent
+            memory = self.system_monitor.memory_percent
+            self.tray_icon.setToolTip(f"CPU: {cpu:.1f}% | 内存: {memory:.1f}%")
         
         # 更新托盘菜单中的系统信息
-        if hasattr(self, 'tray_cpu_action'):
+        if hasattr(self, 'tray_cpu_action') and hasattr(self, 'system_monitor'):
             self.tray_cpu_action.setText(f"CPU: {self.system_monitor.cpu_percent:.1f}%")
-        if hasattr(self, 'tray_memory_action'):
+        if hasattr(self, 'tray_memory_action') and hasattr(self, 'system_monitor'):
             self.tray_memory_action.setText(f"内存: {self.system_monitor.memory_percent:.1f}%")
         
         # 根据CPU使用率更改托盘图标动画
@@ -390,44 +396,59 @@ class TrayPet(QWidget):
             # print(f"气泡位置更新: {bubble_pos.x()}, {bubble_pos.y()}")
     
     def update_bubble_content(self):
-        """更新气泡内容"""
+        """更新气泡内容 - 确保使用最新数据"""
         if not hasattr(self, 'info_bubble'):
             return
         
-        content = "<div style='color: #FFFFFF;'>"  # 设置所有文字为白色
-        
-        # 添加系统信息
-        if hasattr(self, 'system_monitor'):
-            if hasattr(self, 'display_settings') and self.display_settings.display_options.get('cpu', True):
-                content += f"<b>CPU:</b> {self.system_monitor.cpu_percent:.1f}%<br>"
+        try:
+            # 预先准备内容字符串，避免多次字符串连接
+            content_parts = ["<div style='color: #FFFFFF;'>"]  # 设置所有文字为白色
             
-            if hasattr(self, 'display_settings') and self.display_settings.display_options.get('memory', True):
-                content += f"<b>内存:</b> {self.system_monitor.memory_percent:.1f}%<br>"
+            # 添加系统信息 - 直接使用system_monitor的最新数据
+            if hasattr(self, 'system_monitor'):
+                # 获取最新数据
+                cpu = self.system_monitor.cpu_percent
+                memory = self.system_monitor.memory_percent
+                disk = self.system_monitor.disk_percent
+                net_up = self.system_monitor.net_speed_up
+                net_down = self.system_monitor.net_speed_down
+                
+                if hasattr(self, 'display_settings') and self.display_settings.display_options.get('cpu', True):
+                    content_parts.append(f"<b>CPU:</b> {cpu:.1f}%<br>")
+                
+                if hasattr(self, 'display_settings') and self.display_settings.display_options.get('memory', True):
+                    content_parts.append(f"<b>内存:</b> {memory:.1f}%<br>")
+                
+                if hasattr(self, 'display_settings') and self.display_settings.display_options.get('disk', False):
+                    content_parts.append(f"<b>磁盘:</b> {disk:.1f}%<br>")
+                
+                if hasattr(self, 'display_settings') and self.display_settings.display_options.get('network', False):
+                    content_parts.append(f"<b>网络:</b> ↓{net_down:.1f}KB/s ↑{net_up:.1f}KB/s<br>")
             
-            if hasattr(self, 'display_settings') and self.display_settings.display_options.get('disk', False):
-                content += f"<b>磁盘:</b> {self.system_monitor.disk_percent:.1f}%<br>"
+            # 添加天气信息
+            if hasattr(self, 'weather_manager') and hasattr(self, 'display_settings') and self.display_settings.display_options.get('weather', True):
+                content_parts.append(f"<b>天气:</b> {self.weather_manager.weather_info}<br>")
             
-            if hasattr(self, 'display_settings') and self.display_settings.display_options.get('network', False):
-                content += f"<b>网络:</b> ↓{self.system_monitor.net_speed_down:.1f}KB/s ↑{self.system_monitor.net_speed_up:.1f}KB/s<br>"
-        
-        # 添加天气信息
-        if hasattr(self, 'weather_manager') and hasattr(self, 'display_settings') and self.display_settings.display_options.get('weather', True):
-            content += f"<b>天气:</b> {self.weather_manager.weather_info}<br>"
-        
-        # 添加时间信息
-        if hasattr(self, 'display_settings') and self.display_settings.display_options.get('time', True):
-            from datetime import datetime
-            now = datetime.now()
-            content += f"<b>时间:</b> {now.strftime('%H:%M:%S')}<br>"
-            content += f"<b>日期:</b> {now.strftime('%Y-%m-%d')}<br>"
-        
-        content += "</div>"
-        
-        # 设置气泡内容
-        self.info_bubble.setText(content)
-        
-        # 设置气泡背景颜色
-        self.info_bubble.setStyleSheet("background-color: rgba(0, 0, 0, 180); border-radius: 10px; padding: 10px;")
+            # 添加时间信息
+            if hasattr(self, 'display_settings') and self.display_settings.display_options.get('time', True):
+                from datetime import datetime
+                now = datetime.now()
+                content_parts.append(f"<b>时间:</b> {now.strftime('%H:%M:%S')}<br>")
+                content_parts.append(f"<b>日期:</b> {now.strftime('%Y-%m-%d')}<br>")
+            
+            content_parts.append("</div>")
+            
+            # 一次性连接所有内容
+            content = "".join(content_parts)
+            
+            # 设置气泡内容
+            self.info_bubble.setText(content)
+            
+            # 设置气泡背景颜色
+            self.info_bubble.setStyleSheet("background-color: rgba(0, 0, 0, 180); border-radius: 10px; padding: 10px;")
+        except Exception as e:
+            # print(f"更新气泡内容时出错: {e}")
+            pass
     
     def show_display_settings(self):
         """显示显示设置菜单"""
@@ -543,34 +564,21 @@ class TrayPet(QWidget):
             # print("鼠标离开，自动隐藏气泡")
 
     def update_weather(self):
-        """更新天气信息"""
+        """更新天气信息 - 使用异步方式"""
         if hasattr(self, 'weather_manager'):
-            # 调用天气管理器的更新方法
             self.weather_manager.update_weather()
-            # print(f"天气信息已更新: {self.weather_manager.weather_info}")
-            
-            # 更新气泡内容
-            if hasattr(self, 'info_bubble') and self.info_bubble.isVisible():
-                self.update_bubble_content()
-            
-            # 如果是第一次加载天气，设置定期更新
-            if self.weather_timer.isSingleShot():
-                self.weather_timer.setSingleShot(False)
-                self.weather_timer.start(900000)  # 15分钟 = 900000毫秒
-                # print("天气更新定时器已设置为每15分钟更新一次")
 
     def closeEvent(self, event):
-        """重写关闭事件处理函数，防止主窗口关闭导致程序退出"""
-        # print("主窗口关闭事件被触发")
-        # 如果是用户点击了关闭按钮，我们只隐藏窗口而不是关闭它
-        if event.spontaneous():
-            self.hide()
-            event.ignore()
-            # print("主窗口关闭事件被忽略，窗口已隐藏")
-        else:
-            # 如果是程序调用close()，我们允许关闭
-            event.accept()
-            # print("主窗口关闭事件被接受")
+        """处理窗口关闭事件"""
+        # 停止所有线程
+        if hasattr(self, 'system_monitor'):
+            self.system_monitor.stop()
+        
+        if hasattr(self, 'weather_manager') and hasattr(self.weather_manager, 'stop'):
+            self.weather_manager.stop()
+        
+        # 接受关闭事件
+        event.accept()
 
     def toggle_autostart(self, enabled):
         """启用或禁用开机自启动"""
@@ -600,12 +608,12 @@ class TrayPet(QWidget):
             if enabled:
                 # 添加到开机自启动
                 reg.SetValueEx(key, app_name, 0, reg.REG_SZ, f'"{app_path}"')
-                print(f"已添加到开机自启动: {app_path}")
+                # print(f"已添加到开机自启动: {app_path}")
             else:
                 # 从开机自启动中移除
                 try:
                     reg.DeleteValue(key, app_name)
-                    print("已从开机自启动中移除")
+                    # print("已从开机自启动中移除")
                 except FileNotFoundError:
                     # 如果键不存在，忽略错误
                     pass
@@ -613,7 +621,7 @@ class TrayPet(QWidget):
             reg.CloseKey(key)
             return True
         except Exception as e:
-            print(f"设置开机自启动失败: {e}")
+            # print(f"设置开机自启动失败: {e}")
             return False
 
     def is_autostart_enabled(self):
@@ -650,7 +658,7 @@ class TrayPet(QWidget):
             reg.CloseKey(key)
             return is_enabled
         except Exception as e:
-            print(f"检查开机自启动失败: {e}")
+            # print(f"检查开机自启动失败: {e}")
             return False
 
 if __name__ == "__main__":

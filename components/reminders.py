@@ -97,13 +97,6 @@ class ReminderManager:
                         # 显示系统通知
                         self.show_notification(reminder["content"])
                         
-                        # 更改宠物表情（如果可能）
-                        if hasattr(self.pet, 'set_pet_animation'):
-                            self.pet.set_pet_animation("jump")  # 使用跳跃动画表示提醒
-                        elif hasattr(self.pet, 'pet_label'):
-                            self.pet.pet_label.setText("🔔")
-                            self.pet.pet_label.setStyleSheet("color: #FFC107;")  # 黄色
-                        
                         # 5秒后恢复正常表情
                         if hasattr(self.pet, 'update_pet_appearance'):
                             QTimer.singleShot(5000, self.pet.update_pet_appearance)
@@ -111,7 +104,8 @@ class ReminderManager:
                         # 标记为已提醒
                         reminder["active"] = False
         except Exception as e:
-            print(f"检查提醒时出错: {e}")
+            # print(f"检查提醒时出错: {e}")
+            pass
 
     def show_notification(self, message):
         """显示系统通知"""
@@ -122,7 +116,7 @@ class ReminderManager:
             # 如果有托盘图标，使用它显示通知
             if hasattr(self.pet, 'tray_icon'):
                 self.pet.tray_icon.showMessage("提醒", message, QSystemTrayIcon.Information, 5000)
-                print(f"托盘通知: {message}")
+                # print(f"托盘通知: {message}")
                 
                 # 如果有动画，切换到提醒动画
                 if hasattr(self.pet, 'animations'):
@@ -143,6 +137,7 @@ class ReminderManager:
                 msg.setText(message)
                 msg.setStandardButtons(QMessageBox.Ok)
                 msg.exec_()
-                print(f"消息框通知: {message}")
+                # print(f"消息框通知: {message}")
         except Exception as e:
-            print(f"显示通知时出错: {e}")
+            # print(f"显示通知时出错: {e}")
+            pass

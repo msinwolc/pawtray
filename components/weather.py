@@ -1,17 +1,49 @@
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
+import time
+import urllib.request
 
-class WeatherManager:
-    def __init__(self, pet):
-        self.pet = pet
-        self.weather_info = "获取中..."
-        self.weather_data = {}
-        
-        # 每1小时获取一次天气
-        self.weather_timer = QTimer(self.pet)
-        self.weather_timer.timeout.connect(self.get_weather)
-        self.weather_timer.start(3600000)  # 每1小时
-        self.get_weather()  # 立即获取一次天气
+class WeatherWorker(QObject):
+    """天气更新工作线程"""
+    weatherUpdated = pyqtSignal(str)  # 天气更新信号
+    finished = pyqtSignal()  # 完成信号
     
+    def __init__(self):
+        super().__init__()
+        self.weather_data = None
+    
+    @pyqtSlot()
+    def update_weather(self):
+        self.get_weather()
+        self.format_weather_info()
+
+        # 如果有天气信息，发送更新信号
+        if self.weather_info:
+            self.weatherUpdated.emit(self.weather_info)
+        
+        # 发送完成信号
+        self.finished.emit()
+
+    def get_weather(self):
+        """获取天气信息"""
+        try:
+            # 使用原始的wttr.in API
+            url = "http://wttr.in/?format=%l|%t|%C"
+            with urllib.request.urlopen(url, timeout=5) as response:
+                data = response.read().decode('utf-8').strip()
+                parts = data.split('|')
+                if len(parts) >= 3:
+                    self.weather_data = {
+                        'city': parts[0].strip(),
+                        'temp': parts[1].strip(),
+                        'condition': parts[2].strip()
+                    }
+                else:
+                    raise Exception("wttr.in返回的数据格式不正确")
+        except Exception as e:
+            self.weatherUpdated.emit("天气更新失败")
+            # print(f"获取天气信息失败: {e}")
+            pass
+
     def format_weather_info(self):
         """格式化天气信息"""
         try:
@@ -57,84 +89,60 @@ class WeatherManager:
         except Exception as e:
             self.weather_info = "天气格式化错误"
             print(f"格式化天气信息失败: {e}")
-    
-    def get_weather(self):
-        """获取天气信息"""
-        try:
-            # 尝试多种方法获取天气
-            self._try_multiple_weather_apis()
-            
-            # 格式化天气信息
-            self.format_weather_info()
-            
-        except Exception as e:
-            self.weather_info = "天气服务不可用"
-            print(f"天气获取错误: {e}")
-    
-    def _try_multiple_weather_apis(self):
-        """尝试多种天气API"""
-        # 尝试方法1: wttr.in
-        try:
-            self._get_weather_wttrin()
-            return
-        except Exception as e:
-            print(f"wttr.in API失败: {e}")
-        
-        # 尝试方法2: 使用IP定位 + 简单天气
-        try:
-            self._get_weather_ip_based()
-            return
-        except Exception as e:
-            print(f"IP定位天气失败: {e}")
-    
-    def _get_weather_wttrin(self):
-        """使用wttr.in获取天气"""
-        import urllib.request
-        
-        # 使用HTTP而不是HTTPS避免SSL问题
-        url = "http://wttr.in/?format=%l|%t|%C"
-        with urllib.request.urlopen(url, timeout=5) as response:
-            data = response.read().decode('utf-8').strip()
-            parts = data.split('|')
-            
-            if len(parts) >= 3:
-                self.weather_data = {
-                    'city': parts[0].strip(),
-                    'temp': parts[1].strip(),
-                    'condition': parts[2].strip()
-                }
-            else:
-                raise Exception("wttr.in返回的数据格式不正确")
-    
-    def _get_weather_ip_based(self):
-        """基于IP的简单天气"""
-        import urllib.request
-        import json
-        
-        # 获取位置
-        with urllib.request.urlopen("http://ip-api.com/json") as response:
-            data = json.loads(response.read().decode('utf-8'))
-            city = data.get('city', 'Unknown')
-            country = data.get('country', '')
-            
-            self.weather_data = {
-                'city': city,
-                'temp': '未知',
-                'condition': '未知'
-            }
 
+class WeatherManager(QObject):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.weather_info = "加载中..."
+        
+        # 创建线程和工作对象
+        self.thread = QThread()
+        self.worker = WeatherWorker()
+        self.worker.moveToThread(self.thread)
+        
+        # 连接信号和槽
+        self.thread.started.connect(self.worker.update_weather)
+        self.worker.weatherUpdated.connect(self.update_weather_info)
+        self.worker.finished.connect(self.thread.quit)
+        
+        # 确保线程结束时清理
+        self.thread.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+    
     def update_weather(self):
+        """启动天气更新线程"""
+        # 如果线程已经在运行，不要再次启动
+        if self.thread.isRunning():
+            # print("天气更新已在进行中，跳过")
+            return
+        
+        # 启动线程
+        self.thread = QThread()
+        self.worker = WeatherWorker()
+        self.worker.moveToThread(self.thread)
+        
+        # 连接信号和槽
+        self.thread.started.connect(self.worker.update_weather)
+        self.worker.weatherUpdated.connect(self.update_weather_info)
+        self.worker.finished.connect(self.thread.quit)
+        
+        # 确保线程结束时清理
+        self.thread.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        
+        # 启动线程
+        self.thread.start()
+    
+    def stop(self):
+        """停止天气更新线程"""
+        if hasattr(self, 'thread') and self.thread.isRunning():
+            self.thread.quit()
+            if not self.thread.wait(1000):
+                self.thread.terminate()
+                self.thread.wait()
+    
+    @pyqtSlot(str)
+    def update_weather_info(self, weather_info):
         """更新天气信息"""
-        try:
-            # 调用现有的天气获取方法
-            self.get_weather()  # 这个方法会更新self.weather_data
-            
-            # 格式化天气信息
-            self.format_weather_info()  # 这个方法会更新self.weather_info
-            
-            print(f"天气信息已更新: {self.weather_info}")
-            return self.weather_info
-        except Exception as e:
-            self.weather_info = "天气网络错误"
-            print(f"获取天气信息出错: {e}")
-            return self.weather_info
+        self.weather_info = weather_info

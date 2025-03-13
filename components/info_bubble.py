@@ -33,7 +33,7 @@ class InfoBubble(QLabel):
         self.border_color = QColor(60, 60, 60, 220)
         
         # 初始隐藏
-        self.hide()  # 初始时隐藏，而不是显示
+        self.hide()
     
     def update_style(self, cpu_percent):
         """根据CPU使用率更新样式"""
