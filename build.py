@@ -47,7 +47,7 @@ def main():
     subprocess.call(cmd)
     
     print("打包完成!")
-    print("可执行文件位于: dist/DesktopPet.exe")
+    print("可执行文件位于: dist/pawtray.exe")
 
 if __name__ == "__main__":
     main()
