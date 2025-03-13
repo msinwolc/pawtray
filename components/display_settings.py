@@ -58,7 +58,7 @@ class DisplaySettings:
     def save_settings(self):
         """保存显示设置到配置文件"""
         try:
-            settings = QSettings("DesktopPet", "DisplaySettings")
+            settings = QSettings("PawTray", "DisplaySettings")
             
             # 保存显示选项
             for key, value in self.display_options.items():
@@ -74,7 +74,7 @@ class DisplaySettings:
     def load_settings(self):
         """从配置文件加载显示设置"""
         try:
-            settings = QSettings("DesktopPet", "DisplaySettings")
+            settings = QSettings("PawTray", "DisplaySettings")
             
             # 加载显示选项
             for key in self.display_options.keys():
@@ -177,7 +177,7 @@ class DisplaySettings:
     # def load_settings(self):
     #     """从配置文件加载设置"""
     #     try:
-    #         settings = QSettings("DesktopPet", "DisplaySettings")
+    #         settings = QSettings("PawTray", "DisplaySettings")
             
     #         for key in self.display_options:
     #             if settings.contains(f"display/{key}"):
@@ -188,7 +188,7 @@ class DisplaySettings:
     # def save_settings(self):
     #     """保存设置到配置文件"""
     #     try:
-    #         settings = QSettings("DesktopPet", "DisplaySettings")
+    #         settings = QSettings("PawTray", "DisplaySettings")
             
     #         for key, value in self.display_options.items():
     #             settings.setValue(f"display/{key}", value)

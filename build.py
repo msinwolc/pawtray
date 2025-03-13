@@ -34,7 +34,7 @@ def main():
         "--onefile",
         "--windowed",
         f"{icon_option}",
-        "--name=DesktopPet",
+        "--name=PawTray",
         "--add-data=resources;resources",
         "main.py"
     ]

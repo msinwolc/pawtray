@@ -138,7 +138,7 @@ class TrayPet(QWidget):
     def load_settings(self):
         """加载设置"""
         try:
-            settings = QSettings("DesktopPet", "Settings")
+            settings = QSettings("PawTray", "Settings")
             
             # 加载显示模式设置
             hover_mode = settings.value("display/hover_mode", "hover")
