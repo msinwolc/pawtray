@@ -21,7 +21,7 @@ class TrayPet(QWidget):
     """只有系统托盘的宠物应用"""
     def __init__(self):
         super().__init__()
-        
+
         # 检测是否是打包环境
         self.is_frozen = getattr(sys, 'frozen', False)
         
@@ -85,9 +85,6 @@ class TrayPet(QWidget):
         
         # 记录鼠标是否在托盘图标上
         self.mouse_over_tray = False
-        
-        # 隐藏主窗口 - 只显示托盘图标
-        self.hide()
         
         # print("宠物初始化完成 - 纯托盘模式")
     
@@ -253,6 +250,13 @@ class TrayPet(QWidget):
         # 添加截图选项
         if hasattr(self, 'screenshot_manager') and hasattr(self.screenshot_manager, 'screenshot_action'):
             self.tray_menu.addAction(self.screenshot_manager.screenshot_action)
+
+        # 添加开机自启动选项
+        self.autostart_action = QAction("开机自启动", self)
+        self.autostart_action.setCheckable(True)
+        self.autostart_action.setChecked(self.is_autostart_enabled())
+        self.autostart_action.triggered.connect(self.toggle_autostart_action)
+        self.tray_menu.addAction(self.autostart_action)
         
         self.tray_menu.addSeparator()
         
@@ -265,7 +269,7 @@ class TrayPet(QWidget):
         self.tray_icon.setContextMenu(self.tray_menu)
         
         # 设置托盘图标提示
-        self.tray_icon.setToolTip("桌面宠物")
+        # self.tray_icon.setToolTip("桌面宠物")
         
         # 显示托盘图标
         self.tray_icon.show()
@@ -275,6 +279,13 @@ class TrayPet(QWidget):
         
         # 当前托盘动画
         self.current_tray_animation = "idle"
+
+    def toggle_autostart_action(self, checked):
+        """处理开机自启动选项的点击事件"""
+        success = self.toggle_autostart(checked)
+        if not success:
+            # 如果设置失败，恢复复选框状态
+            self.autostart_action.setChecked(not checked)
     
     def update_tray_icon(self):
         """更新托盘图标的帧"""
@@ -560,6 +571,87 @@ class TrayPet(QWidget):
             # 如果是程序调用close()，我们允许关闭
             event.accept()
             # print("主窗口关闭事件被接受")
+
+    def toggle_autostart(self, enabled):
+        """启用或禁用开机自启动"""
+        import os
+        import sys
+        import winreg as reg
+        
+        try:
+            # 获取当前执行文件的路径
+            if getattr(sys, 'frozen', False):
+                # PyInstaller打包后的路径
+                app_path = sys.executable
+            else:
+                # 开发环境中的路径
+                app_path = os.path.abspath(sys.argv[0])
+            
+            # 打开注册表键
+            key = reg.OpenKey(
+                reg.HKEY_CURRENT_USER, 
+                r"Software\Microsoft\Windows\CurrentVersion\Run", 
+                0, 
+                reg.KEY_SET_VALUE | reg.KEY_QUERY_VALUE
+            )
+            
+            app_name = "PawTray"
+            
+            if enabled:
+                # 添加到开机自启动
+                reg.SetValueEx(key, app_name, 0, reg.REG_SZ, f'"{app_path}"')
+                print(f"已添加到开机自启动: {app_path}")
+            else:
+                # 从开机自启动中移除
+                try:
+                    reg.DeleteValue(key, app_name)
+                    print("已从开机自启动中移除")
+                except FileNotFoundError:
+                    # 如果键不存在，忽略错误
+                    pass
+            
+            reg.CloseKey(key)
+            return True
+        except Exception as e:
+            print(f"设置开机自启动失败: {e}")
+            return False
+
+    def is_autostart_enabled(self):
+        """检查是否已启用开机自启动"""
+        import sys
+        import winreg as reg
+        
+        try:
+            # 获取当前执行文件的路径
+            if getattr(sys, 'frozen', False):
+                # PyInstaller打包后的路径
+                app_path = sys.executable
+            else:
+                # 开发环境中的路径
+                app_path = os.path.abspath(sys.argv[0])
+            
+            # 打开注册表键
+            key = reg.OpenKey(
+                reg.HKEY_CURRENT_USER, 
+                r"Software\Microsoft\Windows\CurrentVersion\Run", 
+                0, 
+                reg.KEY_QUERY_VALUE
+            )
+            
+            app_name = "PawTray"
+            
+            try:
+                value, _ = reg.QueryValueEx(key, app_name)
+                # 检查路径是否匹配
+                is_enabled = f'"{app_path}"' == value
+            except FileNotFoundError:
+                is_enabled = False
+            
+            reg.CloseKey(key)
+            return is_enabled
+        except Exception as e:
+            print(f"检查开机自启动失败: {e}")
+            return False
 
 if __name__ == "__main__":
     # 创建应用程序对象
