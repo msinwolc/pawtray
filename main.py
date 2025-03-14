@@ -94,12 +94,10 @@ class TrayPet(QWidget):
         
         # 直接检查resources目录
         resources_dir = resource_path("resources")
-        # print(f"检查资源目录: {resources_dir}")
         
         if os.path.exists(resources_dir) and os.path.isdir(resources_dir):
             # 列出目录中的所有GIF文件
             gif_files = [f for f in os.listdir(resources_dir) if f.lower().endswith('.gif')]
-            # print(f"找到GIF文件: {gif_files}")
             
             # 如果找到GIF文件，使用它们
             if gif_files:
@@ -111,15 +109,15 @@ class TrayPet(QWidget):
                     try:
                         movie = QMovie(path)
                         if movie.isValid():
+                            # 增加缓存模式和质量设置
                             movie.setCacheMode(QMovie.CacheAll)
+                            # 设置更新速率，减少闪烁
+                            movie.setSpeed(100)  # 100%的正常速度
                             movie.setScaledSize(QSize(32, 32))  # 设置大小
                             animations[anim_type] = movie
-                            # print(f"成功加载动画: {anim_type} ({path})")
                         else:
-                            # print(f"动画文件无效: {path}")
                             pass
                     except Exception as e:
-                        # print(f"加载动画失败: {path}, 错误: {e}")
                         pass
         else:
             # print(f"资源目录不存在: {resources_dir}")
@@ -308,10 +306,18 @@ class TrayPet(QWidget):
             # 停止当前动画
             if hasattr(self, 'tray_movie'):
                 self.tray_movie.stop()
+                # 断开之前的连接，防止信号累积
+                try:
+                    self.tray_movie.frameChanged.disconnect(self.update_tray_icon)
+                except:
+                    pass
             
             # 设置新动画
             self.tray_movie = self.animations[animation_type]
+            # 重新连接信号
             self.tray_movie.frameChanged.connect(self.update_tray_icon)
+            # 重置动画到第一帧
+            self.tray_movie.jumpToFrame(0)
             self.tray_movie.start()
             self.current_tray_animation = animation_type
             # print(f"切换托盘动画: {animation_type}")
