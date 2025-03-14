@@ -17,9 +17,10 @@ PawTray is a lightweight tray application that combines a charming cat theme wit
 
 ### ⚙️ Customizable Display
 
+## Preview
+![preview](screenshots/preview.png)
 
 ## System Requirements
-
 
 - Windows 10 or later
 
