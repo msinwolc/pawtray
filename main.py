@@ -435,12 +435,10 @@ class TrayPet(QWidget):
             if hasattr(self, 'weather_manager') and hasattr(self, 'display_settings') and self.display_settings.display_options.get('weather', True):
                 content_parts.append(f"<b>天气:</b> {self.weather_manager.weather_info}<br>")
             
-            # 添加时间信息
-            if hasattr(self, 'display_settings') and self.display_settings.display_options.get('time', True):
-                from datetime import datetime
-                now = datetime.now()
-                content_parts.append(f"<b>时间:</b> {now.strftime('%H:%M:%S')}<br>")
-                content_parts.append(f"<b>日期:</b> {now.strftime('%Y-%m-%d')}<br>")
+            # 添加本地IP地址信息
+            if hasattr(self, 'display_settings') and self.display_settings.display_options.get('ip', True):
+                local_ip = self.get_local_ip()
+                content_parts.append(f"<b>本地IP:</b> {local_ip}<br>")
             
             content_parts.append("</div>")
             
@@ -453,8 +451,33 @@ class TrayPet(QWidget):
             # 设置气泡背景颜色
             self.info_bubble.setStyleSheet("background-color: rgba(0, 0, 0, 180); border-radius: 10px; padding: 10px;")
         except Exception as e:
-            # print(f"更新气泡内容时出错: {e}")
-            pass
+            print(f"更新气泡内容时出错: {e}")
+    
+    def get_local_ip(self):
+        """获取本地IP地址（192.168开头）"""
+        import socket
+        try:
+            # 创建一个临时socket连接来获取本地IP
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            # 不需要真正连接
+            s.connect(('8.8.8.8', 1))
+            local_ip = s.getsockname()[0]
+            s.close()
+            
+            # 只返回192开头的IP
+            if local_ip.startswith('192.'):
+                return local_ip
+            else:
+                # 尝试获取所有网络接口
+                for interface in socket.getaddrinfo(socket.gethostname(), None):
+                    ip = interface[4][0]
+                    if ip.startswith('192.'):
+                        return ip
+                
+                return "未找到192开头的IP"
+        except Exception as e:
+            print(f"获取本地IP出错: {e}")
+            return "获取IP失败"
     
     def show_display_settings(self):
         """显示显示设置菜单"""

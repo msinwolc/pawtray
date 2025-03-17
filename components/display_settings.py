@@ -12,8 +12,7 @@ class DisplaySettings:
             'disk': False,
             'network': False,
             'weather': False,
-            'time': False,
-            'battery': False
+            'ip': False,  # 新增IP地址选项，替换原来的time
         }
 
         # 气泡位置设置
@@ -110,8 +109,7 @@ class DisplaySettings:
             ('disk', '磁盘使用率'),
             ('network', '网络速度'),
             ('weather', '天气信息'),
-            ('time', '当前时间'),
-            ('battery', '电池状态')
+            ('ip', '本地IP地址'),  # 替换原来的time选项
         ]
         
         for key, label in options:
