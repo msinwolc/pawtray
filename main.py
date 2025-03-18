@@ -68,12 +68,11 @@ class TrayPet(QWidget):
         self.animation_timer.timeout.connect(self.switch_to_idle_animation)
         self.animation_timer.start(60000)  # 每1分钟切换一次
         
-        # 设置天气更新定时器
+        # 设置天气更新定时器 - 使用持续运行的定时器
         self.weather_timer = QTimer(self)
         self.weather_timer.timeout.connect(self.update_weather)
         # 延迟5秒后开始加载天气，然后每15分钟更新一次
-        self.weather_timer.setSingleShot(True)
-        self.weather_timer.start(5000)  # 5秒后加载天气
+        QTimer.singleShot(5000, self.initial_weather_update)  # 5秒后初始加载
         
         # 记录是否处于休息状态
         self.is_resting = False
@@ -592,10 +591,22 @@ class TrayPet(QWidget):
             self.show_bubble = False
             # print("鼠标离开，自动隐藏气泡")
 
-    def update_weather(self):
-        """更新天气信息 - 使用异步方式"""
+    def initial_weather_update(self):
+        """初始天气更新并启动定期更新"""
         if hasattr(self, 'weather_manager'):
             self.weather_manager.update_weather()
+        
+        # 启动定期更新定时器（每15分钟）
+        if hasattr(self, 'weather_timer'):
+            self.weather_timer.start(15 * 60 * 1000)  # 15分钟 = 900,000毫秒
+            # self.weather_timer.start(30 * 1000)  # 本地测试，30秒
+            # print("天气定时更新已启动，间隔15分钟")
+
+    def update_weather(self):
+        """定期更新天气信息"""
+        if hasattr(self, 'weather_manager'):
+            self.weather_manager.update_weather()
+            print("定时天气更新已执行")
 
     def closeEvent(self, event):
         """处理窗口关闭事件"""
