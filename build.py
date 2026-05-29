@@ -44,7 +44,7 @@ def main():
     
     # 执行打包命令
     print(f"执行命令: {' '.join(cmd)}")
-    subprocess.call(cmd)
+    subprocess.check_call(cmd)
     
     print("打包完成!")
     print("可执行文件位于: dist/pawtray.exe")
