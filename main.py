@@ -452,31 +452,50 @@ class TrayPet(QWidget):
         except Exception as e:
             print(f"更新气泡内容时出错: {e}")
     
-    def get_local_ip(self):
-        """获取本地IP地址（192.168开头）"""
-        import socket
-        try:
-            # 创建一个临时socket连接来获取本地IP
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            # 不需要真正连接
-            s.connect(('8.8.8.8', 1))
-            local_ip = s.getsockname()[0]
-            s.close()
+    # def get_local_ip(self):
+    #     """获取本地IP地址（192.168开头）"""
+    #     import socket
+    #     try:
+    #         # 创建一个临时socket连接来获取本地IP
+    #         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #         # 不需要真正连接
+    #         s.connect(('8.8.8.8', 1))
+    #         local_ip = s.getsockname()[0]
+    #         s.close()
             
-            # 只返回192开头的IP
-            if local_ip.startswith('192.'):
-                return local_ip
-            else:
-                # 尝试获取所有网络接口
-                for interface in socket.getaddrinfo(socket.gethostname(), None):
-                    ip = interface[4][0]
-                    if ip.startswith('192.'):
-                        return ip
+    #         # 只返回192开头的IP
+    #         if local_ip.startswith('192.'):
+    #             return local_ip
+    #         else:
+    #             # 尝试获取所有网络接口
+    #             for interface in socket.getaddrinfo(socket.gethostname(), None):
+    #                 ip = interface[4][0]
+    #                 if ip.startswith('192.'):
+    #                     return ip
                 
-                return "未找到192开头的IP"
+    #             return "未找到192开头的IP"
+    #     except Exception as e:
+    #         print(f"获取本地IP出错: {e}")
+    #         return "获取IP失败"
+
+    def get_local_ip(self):
+        """获取当前本地 IP """
+        import socket
+
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+            # 不会真正发送数据
+            s.connect(("8.8.8.8", 80))
+
+            ip = s.getsockname()[0]
+            s.close()
+
+            return ip
+
         except Exception as e:
-            print(f"获取本地IP出错: {e}")
-            return "获取IP失败"
+            print(f"获取IP失败: {e}")
+            return "127.0.0.1"
     
     def show_display_settings(self):
         """显示显示设置菜单"""
