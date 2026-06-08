@@ -17,6 +17,14 @@ from components.weather import WeatherManager
 from components.system_monitor import SystemMonitor
 from components.display_settings import DisplaySettings
 
+ANIMATION_GROUPS = {
+    "normal": ["idle", "waiting"],
+    "busy": ["excited", "dance"],
+    "warning": ["cry", "sad", "surprised", "catsick"],
+    "rest": ["sleepy", "laydown", "sleep", "eating", "box"],
+    "special": ["deadcat"],
+}
+
 class TrayPet(QWidget):
     """只有系统托盘的宠物应用"""
     def __init__(self):
@@ -33,6 +41,10 @@ class TrayPet(QWidget):
         self.animations = self.load_animations()
         self.current_animation = "idle"
         self.previous_animation = "idle"  # 记录上一个非休息状态的动画
+
+        self.last_group = None
+
+        self.manual_until = 0
         
         # 创建独立的信息气泡
         self.info_bubble = InfoBubble()
@@ -86,6 +98,36 @@ class TrayPet(QWidget):
         self.mouse_over_tray = False
         
         # print("宠物初始化完成 - 纯托盘模式")
+
+
+    def random_from_group(self, group_name):
+        names = {n.lower() for n in ANIMATION_GROUPS.get(group_name, [])}
+
+        available = [
+            anim for anim in self.animations.keys()
+            if anim.lower() in names
+        ]
+
+        return random.choice(available) if available else None
+
+
+    def get_current_group(self):
+        """根据系统状态决定动画组"""
+
+        cpu = self.system_monitor.cpu_percent
+        memory = self.system_monitor.memory_percent
+
+        if cpu > 90:
+            return "warning"
+
+        if cpu > 70:
+            return "busy"
+
+        if memory > 85:
+            return "warning"
+
+        return "normal"
+    
     
     def load_animations(self):
         """加载所有GIF动画"""
@@ -177,23 +219,33 @@ class TrayPet(QWidget):
         # 更新气泡内容
         self.update_bubble_content()
     
+    
     def update_tray_animation_by_cpu(self):
-        """根据CPU使用率更新托盘图标动画"""
+        """根据系统状态切换动画"""
+
         if not self.animations:
             return
-        
-        if self.system_monitor.cpu_percent > 90:
-            # 非常高的CPU使用率
-            high_load_anims = [a for a in self.animations.keys() 
-                              if a.lower() in ['cry', 'sad', 'surprised']]
-            if high_load_anims:
-                self.change_tray_animation(random.choice(high_load_anims))
-        elif self.system_monitor.cpu_percent > 70:
-            # 高CPU使用率
-            medium_load_anims = [a for a in self.animations.keys() 
-                                if a.lower() in ['waiting', 'excited']]
-            if medium_load_anims:
-                self.change_tray_animation(random.choice(medium_load_anims))
+
+        import time
+        if time.time() < self.manual_until:
+            return
+
+        group = self.get_current_group()
+
+        if group == self.last_group:
+            return
+
+        anim = self.random_from_group(group)
+
+        if not anim:
+            return
+
+        self.last_group = group
+        self.is_resting = False
+        self.previous_animation = anim
+
+        self.change_tray_animation(anim)
+
     
     def create_tray_icon(self):
         """创建系统托盘图标"""
@@ -231,7 +283,7 @@ class TrayPet(QWidget):
             
             for anim_type in self.animations.keys():
                 # 排除休息类动画，这些会自动切换
-                if anim_type.lower() not in ['sleepy', 'laydown', 'sleep', 'rest', 'lazy']:
+                if anim_type.lower() not in ANIMATION_GROUPS["rest"]:
                     action = QAction(anim_type, self)
                     action.triggered.connect(lambda checked, a=anim_type: self.manual_change_animation(a))
                     animation_menu.addAction(action)
@@ -335,19 +387,15 @@ class TrayPet(QWidget):
         
         # 保存当前非休息状态的动画
         current_anim = self.current_tray_animation
-        if current_anim.lower() not in ['sleepy', 'laydown', 'sleep', 'rest', 'lazy']:
+        if current_anim.lower() not in ANIMATION_GROUPS["rest"]:
             self.previous_animation = current_anim
         
         # 获取可用的休息动画
-        rest_animations = [anim for anim in self.animations.keys() 
-                          if anim.lower() in ['sleepy', 'laydown', 'sleep', 'rest', 'lazy']]
-        
-        if rest_animations:
-            # 随机选择一个休息动画
-            rest_anim = random.choice(rest_animations)
-            self.change_tray_animation(rest_anim)
+        rest_anim = self.random_from_group("rest")
+
+        if rest_anim:
             self.is_resting = True
-            # print(f"定时切换到休息动画: {rest_anim}")
+            self.change_tray_animation(rest_anim)
         else:
             # 如果没有找到休息动画，使用idle
             if 'idle' in self.animations:
@@ -526,8 +574,13 @@ class TrayPet(QWidget):
 
     def manual_change_animation(self, animation_type):
         """手动切换动画，并重置定时器"""
+        import time
+        self.manual_until = time.time() + 30
         # 保存非休息状态的动画
-        if animation_type.lower() not in ['sleepy', 'laydown', 'sleep', 'rest', 'lazy']:
+        if animation_type.lower() not in [
+                                            x.lower()
+                                            for x in ANIMATION_GROUPS["rest"]
+                                        ]:
             self.previous_animation = animation_type
             self.is_resting = False
         else:
@@ -595,14 +648,10 @@ class TrayPet(QWidget):
         # 如果之前是休息状态，回到休息状态
         if self.is_resting:
             # 获取可用的休息动画
-            rest_animations = [anim for anim in self.animations.keys() 
-                              if anim.lower() in ['sleepy', 'laydown', 'sleep', 'rest', 'lazy']]
-            
-            if rest_animations:
-                # 随机选择一个休息动画
-                rest_anim = random.choice(rest_animations)
+            rest_anim = self.random_from_group("rest")
+
+            if rest_anim:
                 self.change_tray_animation(rest_anim)
-                # print(f"鼠标离开，回到休息状态: {rest_anim}")
         
         # 如果气泡是显示状态，自动隐藏
         if hasattr(self, 'info_bubble') and self.info_bubble.isVisible():

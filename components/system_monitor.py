@@ -29,8 +29,10 @@ class SystemMonitorWorker(QObject):
             memory_percent = memory.percent
             
             # 获取磁盘使用率
-            disk = psutil.disk_usage('/')
-            disk_percent = disk.percent
+            import os
+
+            system_drive = os.environ.get("SystemDrive", "C:")
+            disk_percent = psutil.disk_usage(system_drive + "/").percent
             
             # 获取网络速度
             current_time = time.time()
@@ -69,6 +71,8 @@ class SystemMonitorWorker(QObject):
         self.finished.emit()
 
 class SystemMonitor(QObject):
+    triggerUpdate = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
@@ -96,7 +100,7 @@ class SystemMonitor(QObject):
         """触发工作线程更新系统信息"""
         if self._worker and self._thread and self._thread.isRunning():
             # 通过信号槽机制触发工作线程更新
-            QTimer.singleShot(0, self._worker.update_system_info)
+            self.triggerUpdate.emit()
     
     def start_monitoring(self, update_interval=1000):
         """开始监控系统信息"""
@@ -110,6 +114,7 @@ class SystemMonitor(QObject):
         self._thread = QThread()
         self._worker = SystemMonitorWorker()
         self._worker.moveToThread(self._thread)
+        self.triggerUpdate.connect(self._worker.update_system_info)
         
         # 连接信号和槽
         self._worker.systemInfoUpdated.connect(self.update_system_info)
@@ -151,6 +156,10 @@ class SystemMonitor(QObject):
         
         # 停止工作线程
         if self._worker and self._thread and self._thread.isRunning():
+            try:
+                self.triggerUpdate.disconnect(self._worker.update_system_info)
+            except Exception:
+                pass
             self._worker.stop()
             
             # 等待线程结束，最多等待1秒

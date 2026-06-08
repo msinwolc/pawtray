@@ -52,7 +52,7 @@ class QuickLauncher:
             try:
                 subprocess.Popen(command, shell=True)
                     
-                QTimer.singleShot(1000, self.pet.update_pet_appearance)
+                # QTimer.singleShot(1000, self.pet.update_pet_appearance)
             except Exception as e:
                 # print(f"启动应用失败: {e}")
                 pass
